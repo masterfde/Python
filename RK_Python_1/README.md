@@ -1,4 +1,6 @@
-![RK_Python_1 logo](app/static/rk-python-logo.webp)
+## Application Preview
+
+![RK API Pulse Dashboard](Screenshot.png)
 
 # RK_Python_1 — RK API Pulse
 
