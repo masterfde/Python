@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RK API Pulse | RK_Python_1</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="brand">
+      <img class="brand-logo" src="/static/rk-python-icon.webp" alt="RK_Python_1 logo" width="62" height="62">
+      <div>
+        <strong>RK API Pulse</strong>
+        <div class="muted">Website &amp; API Availability Monitor <span class="signature">· RK_Python_1</span></div>
+      </div>
+    </div>
+    <div class="live">● AUTO MONITORING · 10s</div>
+  </header>
+
+  <div class="top">
+    <div>
+      <h1>API Health Overview</h1>
+      <p>Availability, latency and endpoint performance at a glance</p>
+    </div>
+    <button id="refresh">↻ Check Now</button>
+  </div>
+
+  <div id="load-error" class="error" role="alert"></div>
+
+  <div class="cards">
+    <div class="card metric-total">
+      <div class="metric-head"><span>Total APIs</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="7" height="7" rx="2"/><rect x="15" y="2" width="7" height="7" rx="2"/><rect x="8.5" y="15" width="7" height="7" rx="2"/><path d="M5.5 9v3h6.5m6.5-3v3H12v3"/></svg></div></div>
+      <b id="total">—</b><small>Configured endpoints</small>
+    </div>
+    <div class="card metric-up">
+      <div class="metric-head"><span>Healthy APIs</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></div></div>
+      <b id="up">—</b><small>Responding normally</small>
+    </div>
+    <div class="card metric-down">
+      <div class="metric-head"><span>Failed APIs</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6m0-6 6 6"/></svg></div></div>
+      <b id="down">—</b><small>Confirmed endpoint failures</small>
+    </div>
+    <div class="card metric-slow">
+      <div class="metric-head"><span>Slow APIs</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14l4-4"/><path d="M3.34 16a10 10 0 1 1 17.32 0"/><path d="M5 20h14"/></svg></div></div>
+      <b id="slow">—</b><small>Above latency threshold</small>
+    </div>
+    <div class="card metric-blocked">
+      <div class="metric-head"><span>Blocked APIs</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v5m0 4h.01"/></svg></div></div>
+      <b id="blocked">—</b><small>HTTP 401, 403 or 429</small>
+    </div>
+    <div class="card metric-unknown">
+      <div class="metric-head"><span>Unknown</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg></div></div>
+      <b id="unknown">—</b><small>Unverified / local access issues</small>
+    </div>
+    <div class="card metric-avg">
+      <div class="metric-head"><span>Average Latency</span>
+        <div class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></div></div>
+      <b id="avg">—</b><small>Across latest checks</small>
+    </div>
+  </div>
+
+  <main class="dashboard">
+
+    <section class="panel">
+      <h2>Endpoint Health</h2>
+      <div class="scroll">
+        <table class="health-table">
+          <thead><tr>
+            <th>Endpoint</th><th>Status</th><th>HTTP</th><th>Latency</th><th>Uptime*</th>
+            <th>Downtime</th><th>Reason</th><th>Last checked</th><th>Action</th>
+          </tr></thead>
+          <tbody id="endpoints"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="mid-row">
+      <section class="panel">
+        <h2>Response Time Trend</h2>
+        <div id="chart" class="trend-plot" role="img" aria-label="Response time trend"></div>
+        <div class="foot">Last 40 observations across monitored endpoints · *Uptime = successful checks / conclusive checks (not time-weighted)</div>
+      </section>
+
+      <section class="panel">
+        <h2>Add Public HTTPS Endpoint</h2>
+        <form id="form">
+          <label>DISPLAY NAME
+            <input name="name" placeholder="Example: My Public API" required maxlength="60">
+          </label>
+          <label>HTTPS URL
+            <input name="url" type="url" placeholder="https://api.example.com/health" required>
+          </label>
+          <label>SLOW THRESHOLD (MS)
+            <input name="slow_ms" type="number" min="100" max="30000" value="1500" required>
+          </label>
+          <button>Add Endpoint</button>
+          <div class="error" id="form-error"></div>
+        </form>
+        <div class="foot">Monitor only endpoints you own or are authorized to check. Checks run automatically every 10 seconds while the Python server is running.</div>
+      </section>
+    </div>
+
+    <div class="bottom-row">
+      <section class="panel">
+        <h2>Availability &amp; Access Incidents</h2>
+        <div class="scroll short">
+          <table>
+            <thead><tr><th>Endpoint</th><th>Started (UTC)</th><th>Recovered (UTC)</th><th>Duration</th><th>Type / State</th></tr></thead>
+            <tbody id="incidents"></tbody>
+          </table>
+        </div>
+        <p class="note">Durations are measured between checks, so they are approximate. Access issues (TLS, DNS, blocked responses) are not counted as confirmed endpoint downtime. An incident closes when its type changes or the endpoint responds successfully.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Recent Monitoring History</h2>
+        <div class="scroll short">
+          <table>
+            <thead><tr><th>Endpoint</th><th>Time (UTC)</th><th>Status</th><th>Latency</th></tr></thead>
+            <tbody id="history"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
