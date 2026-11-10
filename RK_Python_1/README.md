@@ -4,70 +4,140 @@
 
 # RK_Python_1 — RK API Pulse
 
-A small Python app that watches public web APIs and shows whether they are up, slow, down or blocking requests. Built with **FastAPI**, **HTTPX**, **SQLite** and a plain HTML/CSS/JavaScript dashboard.
+**RK API Pulse** is a Python-based website and API availability monitoring system that tracks endpoint health, response latency, HTTP errors, and availability incidents. Built with **FastAPI**, **HTTPX**, **SQLite**, and an HTML/CSS/JavaScript dashboard, it provides automated monitoring, diagnostics, and historical performance insights.
 
-## What it does
-- Checks every endpoint automatically every 10 seconds (and on demand with **Check Now**)
-- Labels each result **UP**, **SLOW**, **DOWN**, **BLOCKED** or **UNKNOWN**
-- Saves latency, HTTP code and error text for every check
-- Records incidents (start, recovery, duration) and separates real outages (**DOWN**) from access problems (**ACCESS_ISSUE**: 401/403/429, TLS, DNS)
-- Add or remove endpoints from the dashboard
-- Draws a response-time chart with no chart library
+## Key Features
 
-## Project layout
+- **Automated monitoring:** Checks configured endpoints every 10 seconds, with a manual **Check Now** option.
+- **Health classification:** Identifies **UP**, **SLOW**, **DOWN**, **BLOCKED**, and **UNKNOWN** results.
+- **Request diagnostics:** Records response latency, HTTP status codes, and error details.
+- **Incident tracking:** Records start time, recovery time, and approximate duration, distinguishing outages (**DOWN**) from access issues (**ACCESS_ISSUE**).
+- **Endpoint management:** Add or remove public HTTPS endpoints from the dashboard.
+- **Performance visualization:** Displays a response-time trend chart without an external charting library.
+- **Historical visibility:** Stores monitoring results and incidents in SQLite.
+
+## Technology Stack
+
+| Layer              | Technology              |
+| ------------------ | ----------------------- |
+| Backend            | Python, FastAPI         |
+| HTTP monitoring    | HTTPX                   |
+| Database           | SQLite                  |
+| Frontend           | HTML5, CSS3, JavaScript |
+| API documentation  | OpenAPI / Swagger UI    |
+| Testing            | Pytest                  |
+| Application server | Uvicorn                 |
+
+## Project Structure
+
+```text
+RK_Python_1/
+├── app/
+│   ├── __init__.py
+│   ├── config.py        # Database path, intervals, timeouts, sample endpoints
+│   ├── database.py      # SQLite storage and incident tracking
+│   ├── checker.py       # URL validation, classification, diagnostics, check loop
+│   ├── main.py          # FastAPI routes and application setup
+│   └── static/          # Dashboard HTML, CSS, JavaScript, logo and favicon
+├── tests/               # Pytest test suite
+├── Screenshot.png       # Dashboard preview
+├── requirements.txt
+├── .gitignore
+└── README.md
 ```
-app/
-  config.py      settings (database path, interval, timeout, sample endpoints)
-  database.py    SQLite tables, saving checks, incident logic
-  checker.py     URL safety check, classify(), diagnose(), the checking loop
-  main.py        FastAPI routes
-  static/        index.html, style.css, app.js, logos
-tests/           pytest tests
-```
 
-## Run it (Windows PowerShell)
+## Installation and Setup (Windows PowerShell)
+
+Open PowerShell in the `RK_Python_1` directory.
+
+**1. Create a virtual environment**
+
 ```powershell
 python -m venv .venv
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+**2. Activate the virtual environment**
+
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation, run the following command for the current session and then retry activation:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+**3. Install dependencies**
+
+```powershell
 python -m pip install -r requirements.txt
+```
+
+**4. Start the application**
+
+```powershell
 python -m uvicorn app.main:app --port 8002
 ```
-Open http://127.0.0.1:8002 — API docs at http://127.0.0.1:8002/docs. Use **one** Uvicorn worker only (no `--workers`), otherwise checks run twice.
 
-## Run the tests
+Open the dashboard at **http://127.0.0.1:8002**. Interactive API documentation is available at **http://127.0.0.1:8002/docs**.
+
+Use **one Uvicorn worker** only; running multiple workers can duplicate background monitoring checks.
+
+## Run the Tests
+
 ```powershell
 python -m pytest -q
 ```
 
-## Settings (environment variables)
-| Name | Default | Meaning |
-|---|---|---|
-| `PULSE_DB` | `pulse.db` next to `app/` | SQLite file location |
-| `PULSE_INTERVAL_SECONDS` | `10` | Seconds between check rounds (minimum 10) |
-| `PULSE_KEEP_DAYS` | `14` | Check history older than this is deleted (incidents are kept) |
+## Configuration
 
-## API routes
-- `GET /api/summary` — current status of every endpoint
-- `GET /api/history?limit=100` — recent checks
-- `GET /api/incidents?limit=100` — incidents
-- `POST /api/endpoints` — `{"name":"Example","url":"https://example.com","slow_ms":1500}`
-- `DELETE /api/endpoints/{id}` — remove an endpoint and all its records
-- `POST /api/check-now`
+| Environment variable       | Default                       | Purpose                                                           |
+| -------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| `PULSE_DB`               | `pulse.db` next to `app/` | SQLite database file location                                     |
+| `PULSE_INTERVAL_SECONDS` | `10`                        | Seconds between monitoring rounds (minimum 10)                    |
+| `PULSE_KEEP_DAYS`        | `14`                        | Retention period for check history; incident records are retained |
 
-## How statuses are decided
-| HTTP result | Status |
-|---|---|
-| 200–299 and faster than the threshold | UP |
-| 200–299 but slower than the threshold | SLOW |
-| 401, 403, 407, 429 | BLOCKED |
-| 5xx, 404, 410, or connection failure | DOWN |
-| redirects, other 4xx, TLS/DNS problems | UNKNOWN |
+## API Endpoints
 
-A result only tells you what the **computer running the app** can reach — it is not proof that a site is down for everyone. Durations are measured between checks, so they are approximate. Uptime % = successful checks ÷ conclusive checks (not time-weighted).
+| Method     | Endpoint                     | Description                            |
+| ---------- | ---------------------------- | -------------------------------------- |
+| `GET`    | `/api/summary`             | Current status of configured endpoints |
+| `GET`    | `/api/history?limit=100`   | Recent monitoring checks               |
+| `GET`    | `/api/incidents?limit=100` | Availability and access incidents      |
+| `POST`   | `/api/endpoints`           | Add a monitored endpoint               |
+| `DELETE` | `/api/endpoints/{id}`      | Remove an endpoint and its records     |
+| `POST`   | `/api/check-now`           | Trigger an immediate check             |
 
-## Safety and limits
-- Only public HTTPS URLs on port 443 are accepted; localhost, private IPs and `.local` / `.internal` names are rejected; redirects are not followed.
-- The address is re-checked before every request, but a DNS change between the check and the request is still possible. Keep this app on your own computer and do not expose the add-endpoint API to strangers.
-- Only monitor services you own or are allowed to check. The three sample endpoints are public third-party services, so don't poll them aggressively.
+Example request body for `POST /api/endpoints`:
+
+```json
+{
+  "name": "Example",
+  "url": "https://example.com",
+  "slow_ms": 1500
+}
+```
+
+## Status Classification
+
+| HTTP result or diagnostic                         | Status            |
+| ------------------------------------------------- | ----------------- |
+| HTTP 200–299, response faster than the threshold | **UP**      |
+| HTTP 200–299, response slower than the threshold | **SLOW**    |
+| HTTP 401, 403, 407, or 429                        | **BLOCKED** |
+| HTTP 5xx, 404, 410, or connection failure         | **DOWN**    |
+| Redirects, other 4xx responses, TLS/DNS problems  | **UNKNOWN** |
+
+Monitoring results describe what the **computer running the application** can reach; they do not prove that a service is unavailable to everyone. Incident durations are approximated from check timestamps.
+
+**Uptime percentage** = successful checks ÷ conclusive checks. This is a check-based measure, not a time-weighted availability metric.
+
+## Security and Limitations
+
+- Only public HTTPS endpoints on port 443 are accepted. Localhost, private IP addresses, and `.local` / `.internal` domains are rejected; redirects are not followed.
+- Addresses are checked before requests, but a DNS change between validation and connection remains possible. Run this application in a trusted local environment; do not expose endpoint-management APIs to untrusted users.
+- Monitor only services you own or are authorized to check. Public sample endpoints are third-party services and should not be polled aggressively.
+- Results depend on the local network, DNS, TLS configuration, and internet connectivity.
+- SQLite monitoring data and local environment files should not be committed to a public repository.blic third-party services, so don't poll them aggressively.
 - Needs internet access; results depend on your network.
